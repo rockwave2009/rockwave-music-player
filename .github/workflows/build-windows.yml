@@ -55,7 +55,7 @@ jobs:
         '@ | Out-File -FilePath dist/README.txt -Encoding UTF8
     
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: RockWaveMusicPlayer-Windows
         path: |
