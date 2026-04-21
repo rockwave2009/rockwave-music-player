@@ -22,30 +22,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller playwright
-        python -m playwright install chromium
     
     - name: Build executable
       run: |
-        # 查找 Chromium 浏览器路径
-        $playwrightPath = python -c "import playwright; import os; print(os.path.dirname(playwright.__file__))"
-        $chromiumDir = Join-Path $playwrightPath "driver" "package" ".local-browsers"
-        
-        # 如果路径不存在，尝试其他位置
-        if (-not (Test-Path $chromiumDir)) {
-          $chromiumDir = "$env:USERPROFILE\.cache\ms-playwright"
-        }
-        
-        Write-Host "Chromium directory: $chromiumDir"
-        if (Test-Path $chromiumDir) {
-          Get-ChildItem $chromiumDir -Directory
-        }
-        
-        # 使用 --add-data 打包 Chromium
         pyinstaller --onefile --noconsole --name "RockWaveMusicPlayer" `
           --hidden-import=playwright `
           --hidden-import=playwright.sync_api `
           --collect-all playwright `
-          --add-data "$chromiumDir;playwright_browsers" `
           rockwave_music_play.py
     
     - name: Create README
@@ -60,7 +43,10 @@ jobs:
           • 自动提取歌词
           • 内置播放器
         
-        使用: 双击 RockWaveMusicPlayer.exe
+        使用方法:
+          1. 双击 RockWaveMusicPlayer.exe 启动
+          2. 首次运行会自动下载浏览器（约150MB，需要网络）
+          3. 等待浏览器下载完成即可使用
         
         要求: Windows 7+, 网络连接
         

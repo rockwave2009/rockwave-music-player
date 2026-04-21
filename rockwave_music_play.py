@@ -23,21 +23,71 @@ except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
 
-def get_browser_path():
-    """获取打包后的 Chromium 浏览器路径"""
-    if getattr(sys, 'frozen', False):
-        # 运行在 PyInstaller 打包环境中
-        base_path = sys._MEIPASS
-        browser_path = os.path.join(base_path, 'playwright_browsers')
-        if os.path.exists(browser_path):
-            return browser_path
-    return None
+def check_and_install_browser():
+    """检查浏览器是否存在，不存在则自动下载"""
+    if not PLAYWRIGHT_AVAILABLE:
+        return False
+    
+    try:
+        # 检查浏览器是否已安装
+        from playwright._impl._driver import compute_driver_executable
+        driver_path = compute_driver_executable()
+        
+        # 尝试获取已安装的浏览器列表
+        result = subprocess.run(
+            [str(driver_path), 'install', '--dry-run', 'chromium'],
+            capture_output=True, text=True, timeout=10
+        )
+        
+        # 如果浏览器已安装，直接返回
+        if 'is already installed' in result.stdout or result.returncode == 0:
+            return True
+    except Exception:
+        pass
+    
+    # 浏览器未安装，需要下载
+    return False
 
-# 设置 Playwright 浏览器路径
+
+def install_browser_silent():
+    """静默下载浏览器"""
+    try:
+        import tkinter.messagebox as msgbox
+        
+        # 提示用户
+        result = msgbox.askyesno(
+            "首次运行",
+            "需要下载浏览器组件（约150MB）\n\n"
+            "这是一次性操作，下载后无需再次下载\n\n"
+            "是否现在下载？"
+        )
+        
+        if not result:
+            msgbox.showinfo("提示", "不下载浏览器将无法使用搜索功能")
+            return False
+        
+        # 执行下载
+        subprocess.run(
+            [sys.executable, '-m', 'playwright', 'install', 'chromium'],
+            check=True
+        )
+        
+        msgbox.showinfo("完成", "浏览器下载完成！")
+        return True
+        
+    except Exception as e:
+        try:
+            msgbox.showerror("错误", f"浏览器下载失败: {e}")
+        except:
+            pass
+        return False
+
+
+# 程序启动时检查浏览器
 if PLAYWRIGHT_AVAILABLE:
-    browser_path = get_browser_path()
-    if browser_path:
-        os.environ['PLAYWRIGHT_BROWSERS_PATH'] = browser_path
+    if not check_and_install_browser():
+        # 浏览器未安装，尝试自动下载
+        install_browser_silent()
 
 
 COLORS = {
