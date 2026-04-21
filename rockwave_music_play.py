@@ -9,6 +9,7 @@ from tkinter import ttk, messagebox, filedialog
 import threading
 import subprocess
 import os
+import sys
 import json
 import time
 import re
@@ -20,6 +21,23 @@ try:
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
+
+
+def get_browser_path():
+    """获取打包后的 Chromium 浏览器路径"""
+    if getattr(sys, 'frozen', False):
+        # 运行在 PyInstaller 打包环境中
+        base_path = sys._MEIPASS
+        browser_path = os.path.join(base_path, 'playwright_browsers')
+        if os.path.exists(browser_path):
+            return browser_path
+    return None
+
+# 设置 Playwright 浏览器路径
+if PLAYWRIGHT_AVAILABLE:
+    browser_path = get_browser_path()
+    if browser_path:
+        os.environ['PLAYWRIGHT_BROWSERS_PATH'] = browser_path
 
 
 COLORS = {
@@ -56,11 +74,22 @@ class ROCKWAVEMP3AutoGUI:
         self.root.minsize(850, 650)
         self.root.configure(bg=COLORS['bg_main'])
 
-        self.download_dir = "/Users/apple/Music/mp3"
+        # 跨平台的默认音乐目录
+        if platform.system() == 'Windows':
+            default_music = os.path.join(os.path.expanduser('~'), 'Music', 'mp3')
+        elif platform.system() == 'Darwin':
+            default_music = os.path.join(os.path.expanduser('~'), 'Music', 'mp3')
+        else:
+            default_music = os.path.join(os.path.expanduser('~'), 'Music', 'mp3')
+        
+        self.download_dir = default_music
         os.makedirs(self.download_dir, exist_ok=True)
 
         self.downloaded_file = os.path.join(self.download_dir, "downloaded.json")
         self.downloaded = self.load_downloaded()
+
+        # 用于动态显示目录的变量
+        self.dir_display_var = tk.StringVar(value=f"下载目录: {self.download_dir}")
 
         self.current_songs = []
         self.current_query = ""
@@ -329,7 +358,8 @@ class ROCKWAVEMP3AutoGUI:
         inner = tk.Frame(frame, bg=COLORS['wood_medium'], padx=10, pady=4)
         inner.pack(fill=tk.X)
 
-        tk.Label(inner, text=f"下载目录: {self.download_dir}",
+        # 使用 StringVar 动态显示目录
+        tk.Label(inner, textvariable=self.dir_display_var,
                bg=COLORS['wood_medium'], fg=COLORS['wood_light'],
                font=FONTS['small']).pack(side=tk.LEFT)
 
@@ -875,6 +905,8 @@ class ROCKWAVEMP3AutoGUI:
             self.downloaded_file = os.path.join(self.download_dir, "downloaded.json")
             self.downloaded = self.load_downloaded()
             self.refresh_downloaded_list()
+            # 更新目录显示
+            self.dir_display_var.set(f"下载目录: {self.download_dir}")
 
 
 def main():
